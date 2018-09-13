@@ -8,10 +8,14 @@ from moviepy.editor import VideoFileClip
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 
-if tf.__version__ < '1.4.0':
-    raise ImportError('Please upgrade your tensorflow installation to v1.4.* or later!')
+#if tf.__version__ < '1.4.0':
+    #raise ImportError('Please upgrade your tensorflow installation to v1.4.* or later!')
 
 class ShipDetection:
+    frame = 0
+    max_frame = 0
+    progress = 0
+    jlog = {}
     def __init__(self, ship_detection_graph_path,
                  ship_detection_graph_label_path,
                  num_classes):
@@ -49,6 +53,10 @@ class ShipDetection:
         return delta
 
     def pipeline(self,image):
+
+        ShipDetection.frame += 1
+        ShipDetection.progress = int((ShipDetection.frame / ShipDetection.max_frame) * 100)
+        print(ShipDetection.progress)
         detection_graph= self.__ship_detection_graph
         category_index= self.__category_index
         with detection_graph.as_default():
@@ -128,8 +136,11 @@ class ShipDetection:
         return image_np
 
 
-def main():
-
+def main(INPUT_FILE,subclip_start,subclip_end):
+    ShipDetection.max_frame = 0
+    ShipDetection.jlog = {}
+    ShipDetection.frame = 0
+    ShipDetection.progress = 0
     INPUT_DIRECTORY = 'input_video'
     OUTPUT_DIRECTORY = 'output_video'
     INPUT_FILE = 'test.mp4'
@@ -141,17 +152,17 @@ def main():
 
 
     # Model preparation
-    MODEL_NAME = './object_detection/models/ssd_mobilenet_v1_ship_15000'
+    MODEL_NAME = './models/ssd_mobilenet_v1_ship_15000'
 
     ship_detection_graph_path = MODEL_NAME + '/frozen_inference_graph.pb'
 
-    ship_detection_graph_label_path = os.path.join('./object_detection/data', 'ship_label_map.pbtxt')
+    ship_detection_graph_label_path = os.path.join('data', 'ship_label_map.pbtxt')
 
     NUM_CLASSES = 1
     object_detect = ShipDetection(ship_detection_graph_path,
                                   ship_detection_graph_label_path,
                                      num_classes=NUM_CLASSES)
-
+    ShipDetection.max_frame=clip.duration*clip.fps
     # Write processed images to video
     vid = clip.fl_image(object_detect.pipeline)
     vid.write_videofile(vid_output, audio=False)
